@@ -1,0 +1,128 @@
+{
+  "total": 20,
+  "passed": 20,
+  "failed": 0,
+  "success_rate_percent": 100.0,
+  "scenarios": [
+    {
+      "id": 1,
+      "name": "Startup State",
+      "passed": true,
+      "details": "state=SENSOR_FAULT, valid=False"
+    },
+    {
+      "id": 2,
+      "name": "Five-Valid-Sample Recovery",
+      "passed": true,
+      "details": "final_state=SAFE"
+    },
+    {
+      "id": 3,
+      "name": "Stable SAFE Operation",
+      "passed": true,
+      "details": "filt=0.00"
+    },
+    {
+      "id": 4,
+      "name": "WARNING Entry & Convergence (~20 deg)",
+      "passed": true,
+      "details": "state=WARNING, filt=19.72"
+    },
+    {
+      "id": 5,
+      "name": "DANGER Entry & Convergence (~40 deg)",
+      "passed": true,
+      "details": "state=DANGER, filt=39.47"
+    },
+    {
+      "id": 6,
+      "name": "Direct SAFE -> DANGER Escalation",
+      "passed": true,
+      "details": "trajectory=SAFE->SAFE->SAFE->SAFE->DANGER"
+    },
+    {
+      "id": 7,
+      "name": "DANGER -> WARNING De-escalation",
+      "passed": true,
+      "details": "start=True, final=WARNING, filt=20.09"
+    },
+    {
+      "id": 8,
+      "name": "WARNING -> SAFE De-escalation",
+      "passed": true,
+      "details": "state=SAFE, filt=0.11"
+    },
+    {
+      "id": 9,
+      "name": "Hysteresis Boundary Immunity",
+      "passed": true,
+      "details": "14\u00b0=True, 16\u00b0=True, 13\u00b0(hold)=True, 11\u00b0(exit)=True"
+    },
+    {
+      "id": 10,
+      "name": "Escalation/De-escalation Asymmetry",
+      "passed": true,
+      "details": "esc_steps=5 (3 qual), deesc_steps=6 (5 qual)"
+    },
+    {
+      "id": 11,
+      "name": "Transient Spike Rejection",
+      "passed": true,
+      "details": "state_after_spike=SAFE"
+    },
+    {
+      "id": 12,
+      "name": "Zero Acceleration Vector Rejection",
+      "passed": true,
+      "details": "fault=INVALID_VECTOR"
+    },
+    {
+      "id": 13,
+      "name": "Excessive Acceleration Rejection",
+      "passed": true,
+      "details": "fault=INVALID_VECTOR"
+    },
+    {
+      "id": 14,
+      "name": "Sensor Read Failure Handling",
+      "passed": true,
+      "details": "state=SENSOR_FAULT, fault=READ_FAILURE"
+    },
+    {
+      "id": 15,
+      "name": "Injected Fault Button Detection",
+      "passed": true,
+      "details": "state=SENSOR_FAULT, fault=INJECTED"
+    },
+    {
+      "id": 16,
+      "name": "5-Sample Fault Recovery to SAFE",
+      "passed": true,
+      "details": "final_state=SAFE"
+    },
+    {
+      "id": 17,
+      "name": "Tilted Fault Recovery to DANGER",
+      "passed": true,
+      "details": "recovered_state=DANGER"
+    },
+    {
+      "id": 18,
+      "name": "Filter State Reset After Fault",
+      "passed": true,
+      "details": "zero_out=True"
+    },
+    {
+      "id": 19,
+      "name": "Extreme Angles (0\u00b0, 90\u00b0, 180\u00b0)",
+      "passed": true,
+      "details": "0\u00b0=0.00, 90\u00b0=90.00, 180\u00b0=180.00"
+    },
+    {
+      "id": 20,
+      "name": "Full Cyclic Sequence (SAFE->WARN->DANGER->WARN->SAFE)",
+      "passed": true,
+      "details": "cycle=SAFE->SAFE->SAFE->SAFE->SAFE"
+    }
+  ]
+}

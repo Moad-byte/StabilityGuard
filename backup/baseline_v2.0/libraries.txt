@@ -1,0 +1,4 @@
+# Wokwi Library List
+# Automatically added based on includes:
+Adafruit GFX Library
+Adafruit SSD1306

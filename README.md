@@ -1,0 +1,392 @@
+# StabilityGuard — Embedded Stability & Fault Detection System
+
+<div align="center">
+
+![StabilityGuard — Embedded Stability & Fault Detection System](media/banner.png)
+
+[![Automated Tests](https://img.shields.io/badge/Automated_Tests-20%2F20_Passed-brightgreen.svg)](#9-automated-testing--verification-hierarchy)
+[![Target Controller](https://img.shields.io/badge/Target_Board-Raspberry_Pi_Pico_W-blue.svg)](#4-hardware-peripherals--pin-mapping)
+[![Simulation Platform](https://img.shields.io/badge/Simulation-Wokwi_Verified-orange.svg)](#3-live-simulation--circuit-overview)
+[![Live Simulation](https://img.shields.io/badge/Live_Wokwi-Project_478987065565532161-green.svg)](https://wokwi.com/projects/478987065565532161)
+[![Architecture](https://img.shields.io/badge/Architecture-Portable_C%2B%2B11-purple.svg)](#2-system-architecture)
+[![Status](https://img.shields.io/badge/Phase_1-Verified_Release_v2.1.1-teal.svg)](#1-project-overview--engineering-motivation)
+
+**An embedded stability monitoring, dynamic tilt classification, and sensor-fault isolation system engineered for autonomous mobile robots (AMRs), industrial transport utility vehicles, and agricultural rovers.**
+
+[Live Wokwi Simulation](https://wokwi.com/projects/478987065565532161) • [Automated Test Evidence](evidence/automated_test_log.txt) • [Architecture Guide](docs/architecture.md) • [Post-Mortem Report](docs/troubleshooting.md)
+
+</div>
+
+---
+
+## 1. Project Overview & Engineering Motivation
+
+Autonomous mobile robots (AMRs), automated guided vehicles (AGVs), and rough-terrain robotic platforms operate in dynamic industrial and agricultural environments where terrain gradient shifts, payload imbalances, and floor irregularities pose severe rollover hazards. 
+
+In safety-critical embedded systems, relying on raw accelerometer measurements or naive threshold checks introduces three core failure modes:
+1. **Mechanical Vibration & Transient Acceleration Spikes**: Wheel impacts and motor vibrations corrupt instantaneous gravity vector calculations, triggering nuisance alarms or emergency e-stops.
+2. **Sensor Bus Interruptions & Fault Propagation**: Intermittent I²C bus stalls, clock-stretching lockups, or register corruption freeze control loops unless isolated by deterministic fault-recovery state machines.
+3. **Rollover After Recovery**: Resetting from a sensor fault by blindly assuming a `SAFE` state can lead to catastrophic machinery failure if the vehicle is still resting at a critical angle.
+
+**StabilityGuard** solves these challenges by combining integer-based acceleration vector validation, 64-bit integer square root math, tangent table interpolation, exponential moving average (EMA) jitter attenuation, asymmetric hysteresis state transitions, and real-time fault recovery.
+
+> [!NOTE]
+> **Scope & Educational Context**: StabilityGuard Phase 1 is a verified engineering prototype evaluated in the Wokwi embedded simulator on the Raspberry Pi Pico W. It demonstrates robust embedded software design, state machine verification, and bus arbitration. It is not certified for life-critical industrial safety deployment (ISO 13849 / IEC 61508).
+
+---
+
+## 2. System Architecture
+
+StabilityGuard strictly separates the platform-independent core safety logic from hardware-dependent peripheral drivers:
+
+```
++-----------------------------------------------------------------------------------+
+|                         Raspberry Pi Pico W Firmware                              |
+|                                 (sketch.ino)                                      |
+|                                                                                   |
+|  +--------------------+    +--------------------+    +-------------------------+  |
+|  |  MPU6050 (0x68)    |    |  SSD1306 (0x3C)    |    | Actuation & Indicators  |  |
+|  |  16,384 LSB/g      |    |  128x64 OLED       |    | LEDs: GP10, GP11, GP12  |  |
+|  |  Shared I2C0 Bus   |    |  Shared I2C0 Bus   |    | Buzzer: GP13 PWM        |  |
+|  |  10 Hz Sampling    |    |  4 Hz Telemetry    |    | Button: GP14 (Active-L) |  |
+|  +---------+----------+    +---------^----------+    +------------^------------+  |
+|            | Raw Counts (x, y, z)    | Display Telemetry          | Non-blocking  |
++------------|-------------------------|----------------------------|---------------+
+             |                         |                            |
+             v                         |                            |
++--------------------------------------+----------------------------|---------------+
+|                             StabilityGuard.h                                      |
+|                                                                                   |
+|  1. Vector Sanity Check : 8192^2 <= (x^2 + y^2 + z^2) <= 24576^2 (0.5g to 1.5g)   |
+|  2. Fixed-Point Math    : 64-bit isqrt64(x^2 + y^2) & 46-point tangent table      |
+|  3. Dynamic Filtering   : Exponential Moving Average (alpha = 0.35)               |
+|  4. Dual Hysteresis     : Warning (12°-15° deadband), Danger (26°-30° deadband)   |
+|  5. Asymmetric Debounce : 3 consecutive samples escalate, 5 samples de-escalate   |
+|  6. Direct Fault Return : 5-sample recovery with real-time state reclassification|
++-----------------------------------------------------------------------------------+
+```
+
+### State Machine Transition Topology
+```mermaid
+stateDiagram-v2
+    [*] --> SENSOR_FAULT : System Boot / Power-On
+
+    SENSOR_FAULT --> SAFE : 5 Valid Samples & Angle < 15.0°
+    SENSOR_FAULT --> WARNING : 5 Valid Samples & 15.0° <= Angle < 30.0°
+    SENSOR_FAULT --> DANGER : 5 Valid Samples & Angle >= 30.0°
+
+    SAFE --> WARNING : Filtered Tilt >= 15.0° (3 consecutive samples)
+    SAFE --> DANGER : Filtered Tilt >= 30.0° (3 consecutive samples)
+
+    WARNING --> DANGER : Filtered Tilt >= 30.0° (3 consecutive samples)
+    WARNING --> SAFE : Filtered Tilt < 12.0° (5 consecutive samples)
+
+    DANGER --> WARNING : Filtered Tilt < 26.0° (5 consecutive samples, >= 15.0°)
+    DANGER --> SAFE : Filtered Tilt < 26.0° (5 consecutive samples, < 15.0°)
+
+    SAFE --> SENSOR_FAULT : I2C Bus Error / Invalid Vector / Button Injected
+    WARNING --> SENSOR_FAULT : I2C Bus Error / Invalid Vector / Button Injected
+    DANGER --> SENSOR_FAULT : I2C Bus Error / Invalid Vector / Button Injected
+```
+
+---
+
+## 3. Live Simulation & Circuit Overview
+
+The full interactive circuit simulation runs in the browser on the **Wokwi Embedded Simulator**:
+
+🔗 **[Open Verified Wokwi Project 478987065565532161](https://wokwi.com/projects/478987065565532161)**
+
+<div align="center">
+
+![StabilityGuard Circuit Layout](media/01_circuit.png)
+*Figure 1: Verified Wokwi simulation breadboard showing Raspberry Pi Pico W, GY-521 MPU6050, SSD1306 OLED, status LEDs, piezo buzzer, and fault-injection pushbutton.*
+
+</div>
+
+---
+
+## 4. Hardware Peripherals & Pin Mapping
+
+| Component | Pin / Interface | Pico GPIO | Function & Electrical Parameters |
+|---|---|:---:|---|
+| **Raspberry Pi Pico W** | Core MCU | - | RP2040 Dual-Core ARM Cortex-M0+ @ 133 MHz, 264 KB SRAM |
+| **MPU6050 IMU** | `SDA` / `SCL` | `GP4` / `GP5` | 3-axis accelerometer configured for $\pm 2g$ full-scale ($16,384 \text{ LSB/g}$), I²C address `0x68` |
+| **SSD1306 OLED (128x64)** | `SDA` / `SCL` | `GP4` / `GP5` | Live numerical tilt angle, operational state, graphical severity gauge, and fault diagnostics, I²C address `0x3C` |
+| **Green Status LED** | Anode via $330\Omega$ | `GP12` | Indicates **SAFE** operational state (tilt $< 15.0^\circ$) |
+| **Yellow Status LED** | Anode via $330\Omega$ | `GP11` | Indicates **WARNING** state (tilt $\ge 15.0^\circ$); flashes synchronously during fault |
+| **Red Status LED** | Anode via $330\Omega$ | `GP10` | Indicates **DANGER** state (tilt $\ge 30.0^\circ$); flashes synchronously during fault |
+| **Piezo Buzzer** | Positive terminal | `GP13` | Emits distinct non-blocking alarm cadences ($1000\text{ Hz}$ in DANGER, $420\text{ Hz}$ in FAULT) |
+| **Fault Pushbutton** | Active LOW | `GP14` | Injects instantaneous hardware fault / sensor bus disconnect simulation |
+
+---
+
+## 5. Operational States & Visual Simulation Evidence
+
+StabilityGuard classifies operating conditions into four mutually exclusive states, visually rendered on the hardware indicators and SSD1306 OLED display:
+
+| State | Tilt Angle Threshold | Actuators & Indicators | OLED Display Interface |
+|:---:|:---:|---|---|
+| **SAFE** | $\theta < 15.0^\circ$ | Green LED **ON**<br>Yellow/Red LEDs **OFF**<br>Buzzer silent | Displays filtered angle ($0.0^\circ$ nominal), `STATE: SAFE`, `[OK . . ]` gauge |
+| **WARNING** | $15.0^\circ \le \theta < 30.0^\circ$ | Yellow LED **ON**<br>Green/Red LEDs **OFF**<br>Buzzer silent | Displays live angle, `STATE: WARNING`, `[######. . ]` gauge |
+| **DANGER** | $\theta \ge 30.0^\circ$ | Red LED **ON**<br>Green/Yellow LEDs **OFF**<br>Buzzer $1000\text{ Hz}$ beep ($90\text{ ms}$ pulse every $600\text{ ms}$) | Displays live angle, `STATE: DANGER`, `[###########!CRIT]` gauge |
+| **SENSOR_FAULT** | Invalid vector / Bus disconnect | Yellow + Red LEDs **flashing** ($350\text{ ms}$)<br>Buzzer $420\text{ Hz}$ chirp ($120\text{ ms}$ every $1000\text{ ms}$) | Angle masked (`--.- deg`), `STATE: SENSOR_FAULT`, `FAULT: <REASON>` |
+
+### Observed Simulation Captures
+
+| SAFE State Operation | WARNING State Operation |
+|:---:|:---:|
+| ![SAFE State](media/02_safe.png)<br><sub>**Figure 2:** Level platform ($0.0^\circ$): Green LED ON, OLED confirms SAFE, buzzer silent.</sub> | ![WARNING State](media/03_warning.png)<br><sub>**Figure 3:** Moderate tilt ($20.0^\circ$): Yellow LED ON, OLED confirms WARNING.</sub> |
+
+| DANGER State Operation | SENSOR_FAULT State Operation |
+|:---:|:---:|
+| ![DANGER State](media/04_danger.png)<br><sub>**Figure 4:** Severe tilt ($40.0^\circ$): Red LED ON, OLED confirms DANGER, critical alarm sounding.</sub> | ![SENSOR_FAULT](media/05_sensor_fault.png)<br><sub>**Figure 5:** Out-of-range simulated acceleration (approximately 2.236g) triggers `SENSOR_FAULT` / `INVALID_VECTOR`; warning indicators and OLED show the fault.</sub> |
+
+---
+
+## 6. Algorithmic Principles & Implementation Details
+
+### 1. Raw-Integer Acceleration Magnitude Validation
+Before computing angles, the engine validates that the measured static acceleration vector approximates the local gravitational field ($1.0g \pm 0.5g$):
+$$\text{MIN\_MAG\_SQ} \le x^2 + y^2 + z^2 \le \text{MAX\_MAG\_SQ}$$
+$$8192^2 \le x^2 + y^2 + z^2 \le 24576^2 \quad (\text{counts}^2)$$
+Any reading outside this window ($|a| < 0.5g$ or $|a| > 1.5g$) is immediately classified as `INVALID_VECTOR`, protecting against free-fall drops, collision impacts, and disconnected sensor floating buses.
+
+### 2. 64-bit Integer Square Root & Tangent Table Interpolation
+To reduce reliance on floating-point math for the magnitude and angle-ratio calculations:
+1. **Horizontal Magnitude**:
+   $$h = \text{isqrt64}(x^2 + y^2)$$
+   Calculated using a 64-bit integer Newton-Raphson approximation.
+2. **Angle Calculation**:
+   $$\theta = \arctan2(h, z)$$
+   Evaluated using a 46-point precomputed lookup table ($\text{round}(16384 \cdot \tan\theta)$ for $\theta \in [0^\circ, 45^\circ]$) combined with linear interpolation and cotangent reflection for $[45^\circ, 90^\circ]$ and $[90^\circ, 180^\circ]$. Angle interpolation uses a bounded lookup table; floating-point arithmetic is still used for interpolation and EMA filtering.
+
+### 3. Exponential Moving Average (EMA) Jitter Attenuation
+Raw angular measurements are smoothed using a first-order recursive filter at $10\text{ Hz}$ ($\Delta t = 100\text{ ms}$):
+$$f_N = \alpha \cdot \theta_N + (1 - \alpha) \cdot f_{N-1}, \quad \text{where } \alpha = 0.35$$
+This provides a cutoff frequency that attenuates high-frequency chassis vibrations while preserving an agile rise time ($90\%$ step response achieved within 6 samples / $600\text{ ms}$).
+
+### 4. Asymmetric Debouncing & Hysteresis Deadbands
+To prevent oscillation and relay chattering near classification boundaries:
+* **Hysteresis Deadbands**:
+  * Warning Entry: $15.0^\circ$ | Warning Exit: $12.0^\circ$ ($3.0^\circ$ deadband)
+  * Danger Entry: $30.0^\circ$ | Danger Exit: $26.0^\circ$ ($4.0^\circ$ deadband)
+* **Asymmetric Debounce Timing**:
+  * **Escalation** (SAFE $\to$ WARNING, WARNING $\to$ DANGER): Requires **3 consecutive samples** ($300\text{ ms}$) meeting or exceeding the entry threshold.
+  * **De-escalation** (DANGER $\to$ WARNING, WARNING $\to$ SAFE): Requires **5 consecutive samples** ($500\text{ ms}$) strictly below the exit threshold.
+
+### 5. Deterministic Fault Recovery
+When recovering from `SENSOR_FAULT`:
+* The system mandates **5 consecutive valid sensor samples** before clearing the fault condition.
+* The recovered state is evaluated directly by reclassifying the filtered angle (`classify(filtered_tilt_deg)`). If the platform is still tilted at $40^\circ$ when the sensor reconnects, it transitions directly to `DANGER`, preventing hazardous actuation.
+
+### 6. Idempotent Zero-Reference Resting Calibration
+The `'c'` serial command computes resting bias offsets:
+* Queries raw sensor counts directly via `readRawHardwareAccel()` rather than already-offset values, ensuring repeated calibrations are idempotent and do not cause offset drift.
+* Incorporates an $8.7^\circ$ ($2500$ counts) tilt guard: if an operator attempts calibration on an incline, the routine rejects the operation to prevent masking an active rollover hazard.
+
+---
+
+## 7. Interactive Serial Test Harness
+
+The firmware includes an interactive serial command interpreter operating at 115,200 baud:
+
+<div align="center">
+
+![Interactive Serial Controls](media/01_commands.png)
+*Figure 6: Live Wokwi Serial Monitor showing the interactive test harness command menu and real-time execution feedback.*
+
+</div>
+
+| Command Key | Action | Observed System Response |
+|:---:|---|---|
+| `'0'` or `'l'` | Force **Level** Orientation ($0.0^\circ$) | Transitions to **SAFE**; Green LED ON; Buzzer silent |
+| `'1'` or `'w'` | Force **Moderate Tilt** ($19.99^\circ$) | Transitions to **WARNING** after 3 samples; Yellow LED ON |
+| `'2'` or `'d'` | Force **Severe Tilt** ($40.01^\circ$) | Transitions to **DANGER** after 3 samples; Red LED ON; 1000 Hz alarm beeps |
+| `'a'` | Run **Automated Demonstration Cycle** | Automatically cycles: SAFE $\to$ WARNING $\to$ DANGER $\to$ WARNING $\to$ SAFE (20s run) |
+| `'r'` | Return to **Real MPU6050 Readings** | Resumes reading raw simulated physics values from Wokwi canvas |
+| `'c'` | **Zero-Reference Calibration** | Averages 20 resting samples; stores hardware bias offsets (guarded to $\le 8.7^\circ$) |
+| `'?'` or `'h'` | Display Command Menu | Prints interactive menu and status |
+
+---
+
+## 8. Actual Automated Test Results & Telemetry Analysis
+
+During the final verification run in Wokwi, the automated demonstration sequence (`'a'`) was executed. The complete raw serial stream was captured and preserved in [`evidence/automated_test_log.txt`](evidence/automated_test_log.txt).
+
+### Observed Transition Chronology (from `evidence/automated_test_log.txt`)
+
+| Timestamp | Pre-Transition State | New Transition State | Filtered Angle | Target Angle | Debounce Criteria Satisfied |
+|:---:|:---:|:---:|:---:|:---:|---|
+| **32,800 ms** | `SENSOR_FAULT` | **`SAFE`** | $0.00^\circ$ | $0.00^\circ$ | 5th consecutive valid sample on level boot |
+| **36,900 ms** | `SAFE` | **`WARNING`** | $18.48^\circ$ | $19.99^\circ$ | 3 consecutive samples $\ge 15.0^\circ$ (samples: 16.42°, 17.67°, 18.48°) |
+| **40,700 ms** | `WARNING` | **`DANGER`** | $36.44^\circ$ | $40.01^\circ$ | 3 consecutive samples $\ge 30.0^\circ$ (samples: 31.55°, 34.51°, 36.44°) |
+| **45,000 ms** | `DANGER` | **`WARNING`** | $20.97^\circ$ | $19.99^\circ$ | 5 consecutive samples $< 26.0^\circ$ (de-escalation damping) |
+| **48,900 ms** | `WARNING` | **`SAFE`** | $1.51^\circ$ | $0.00^\circ$ | 5 consecutive samples $< 12.0^\circ$ (de-escalation damping) |
+
+### Telemetry Vector Visualization
+
+The actual recorded dataset was processed through [`analysis/telemetry_analysis.py`](analysis/telemetry_analysis.py) to generate this vector plot:
+
+<div align="center">
+
+![Actual Telemetry Graph](media/telemetry_plot.svg)
+*Figure 7: Vector plot of actual Wokwi simulation telemetry showing raw tilt (cyan), filtered tilt (white), and colored background operational state regions.*
+
+</div>
+
+* **Total Samples Logged**: 200 samples @ 10.1 Hz (~19.90 seconds)
+* **State Occupancy**: SAFE: 38.0% | WARNING: 38.5% | DANGER: 21.5% | SENSOR_FAULT: 2.0%
+* **Filter Convergence**: Step to $40.01^\circ$ reached $39.47^\circ$ by sample 10, exactly matching the theoretical EMA convergence:
+  $$f_{10} = 40.01 \cdot \left(1 - 0.65^{10}\right) = 39.47^\circ$$
+
+---
+
+## 9. Automated Testing & Verification Hierarchy
+
+StabilityGuard uses a three-tiered testing hierarchy to validate the firmware:
+
+```
++-------------------------------------------------------------------------------+
+|                       Three-Tiered Verification Hierarchy                     |
++-------------------------------------------------------------------------------+
+|  Tier 1: Standalone Native C++ Suite (tests/test_stability_guard.cpp)         |
+|          Validates core safety logic, fixed-point math, and hysteresis dead-   |
+|          bands with zero hardware or Arduino dependencies.                    |
+|                                                                               |
+|  Tier 2: Automated Python Regression Suite (tests/test_runner.py)             |
+|          Independent cross-platform test model verifying 20/20 scenarios with |
+|          closed-form mathematical expectations.                               |
+|                                                                               |
+|  Tier 3: Wokwi Interactive End-to-End Simulation (Pico W Target)               |
+|          Full peripheral integration: shared I²C bus arbitration, non-blocking|
+|          PWM buzzer, discrete LEDs, SSD1306 OLED, and physical fault button.  |
++-------------------------------------------------------------------------------+
+```
+
+### Running the Test Suite
+```bash
+# Run the 20-scenario Python regression test suite:
+python tests/test_runner.py
+
+# Or compile and execute the standalone native C++ suite:
+g++ -std=c++11 -Wall -Wextra -O2 tests/test_stability_guard.cpp -o test_stability_guard
+./test_stability_guard
+```
+
+### Test Results Matrix (20/20 Scenarios Passing)
+
+| ID | Test Scenario | Verified Condition | Status |
+|:---:|---|---|:---:|
+| **01** | Startup State | Boots into `SENSOR_FAULT`, `valid=false`, stage=`STARTUP` | **PASS** |
+| **02** | 5-Sample Recovery | Requires exactly 5 consecutive valid readings before entering SAFE | **PASS** |
+| **03** | Stable SAFE Operation | Level reading ($0.0^\circ$) stable with $< 0.05^\circ$ error; $1000\text{ mg}$ magnitude | **PASS** |
+| **04** | WARNING Entry & Convergence | Enters `WARNING` after 3 qualifying samples; converges within $0.6^\circ$ of $20^\circ$ | **PASS** |
+| **05** | DANGER Entry & Convergence | Enters `DANGER` after 3 qualifying samples; converges within $1.0^\circ$ of $40^\circ$ | **PASS** |
+| **06** | Direct SAFE $\to$ DANGER | Direct step to $45^\circ$ reaches `DANGER` without entering `WARNING` | **PASS** |
+| **07** | DANGER $\to$ WARNING | De-escalates cleanly after 5 qualifying samples below $26.0^\circ$ | **PASS** |
+| **08** | WARNING $\to$ SAFE | Returns to `SAFE` after 5 qualifying samples below $12.0^\circ$ | **PASS** |
+| **09** | Hysteresis Boundary Immunity | Holds `WARNING` state at $13^\circ$ (between $12^\circ$ exit and $15^\circ$ entry) | **PASS** |
+| **10** | Timing Asymmetry | Confirms 3 samples to escalate vs. 5 samples to de-escalate | **PASS** |
+| **11** | Transient Spike Rejection | Single-sample $45^\circ$ tilt spike in SAFE is filtered without tripping alarm | **PASS** |
+| **12** | Zero Vector Rejection | Acceleration vector $(0, 0, 0)$ trips `INVALID_VECTOR` fault | **PASS** |
+| **13** | Excessive Acceleration Rejection | $> 1.5g$ ($32,767$ counts) trips `INVALID_VECTOR` fault | **PASS** |
+| **14** | Sensor Read Failure Handling | I²C communication transaction failure trips `READ_FAILURE` fault | **PASS** |
+| **15** | Injected Fault Button Detection | Hardware pushbutton press immediately trips `INJECTED` fault | **PASS** |
+| **16** | 5-Sample Fault Recovery to SAFE | Releasing fault button recovers cleanly to `SAFE` after 5 valid samples | **PASS** |
+| **17** | Tilted Fault Recovery to DANGER | Sensor recovering while severely tilted ($40^\circ$) transitions directly to `DANGER` | **PASS** |
+| **18** | Filter State Reset After Fault | Fault clears old tilt history; no ghost bias carries over | **PASS** |
+| **19** | Extreme Angle Precision | Validated numerical precision at $0^\circ$, $90^\circ$, and $180^\circ$ | **PASS** |
+| **20** | Full Cyclic Transition Sequence | SAFE $\to$ WARNING $\to$ DANGER $\to$ WARNING $\to$ SAFE full loop | **PASS** |
+
+*Structured machine-readable test results are preserved in [`tests/test_report.json`](tests/test_report.json).*
+
+---
+
+## 10. Engineering Design Decisions & Trade-Offs
+
+| Engineering Challenge | Selected Solution | Evaluated Trade-Off / Rationale |
+|---|---|---|
+| **Shared I²C Bus Stalls** | Explicit STOP frames (`Wire.endTransmission(true)`) | Using STOP transactions was stable in the verified Pico W simulation; the precise cause of earlier bus errors was not conclusively isolated. |
+| **Timer Interrupt Corruption** | Asynchronous polling (`tone(pin, freq)` + manual `noTone()`) | Timestamp-based buzzer stopping avoided the duration-based alarm path and coincided with stable simulator behavior; an interrupt collision was not independently proven. |
+| **Rollover After Sensor Loss** | Dynamic classification upon recovery | Blindly assuming a vehicle is `SAFE` upon sensor reconnection is hazardous. Evaluating the real-time tilt angle on the 5th recovery sample ensures direct transition to `DANGER` if tilted. |
+| **Repeated Calibration** | Query raw registers via `readRawHardwareAccel()` | Reading uncorrected counts prevents previously stored offsets from being subtracted a second time during calibration; accuracy remains subject to sensor and measurement conditions. |
+
+---
+
+## 11. Verified Scope & Known Limitations
+
+1. **Verified Simulation Reference**: The provided runtime log and screenshots document core functionality in Wokwi targeting the **Raspberry Pi Pico W (`board-pi-pico-w`)**; see the evidence and test sections for precise coverage.
+2. **Pico 2 W simulation limitation**: In this project’s Wokwi trials, selecting `board-pi-pico-2w` produced `ANGLE_MATH_INVALID` on valid level readings. The exact board-specific cause has not been conclusively isolated. The reference simulation therefore uses `board-pi-pico-w`; this does not establish physical RP2350 hardware compatibility.
+3. **Sensor Scope**: Single 3-axis accelerometer vector analysis assumes steady-state dynamic conditions. Centrifugal or dynamic lateral acceleration from aggressive vehicle maneuvering can influence instantaneous gravity estimation; gyro sensor fusion is planned for Phase 2.
+4. **Non-Certified**: Educational engineering portfolio prototype. Not intended for commercial life-safety applications.
+
+---
+
+## 12. Repository Structure
+
+```text
+StabilityGuard/
+├── src/
+│   ├── sketch.ino               # Raspberry Pi Pico W firmware (v2.1.1)
+│   ├── StabilityGuard.h         # Platform-independent core safety engine
+│   ├── diagram.json             # Wokwi circuit schematic (board-pi-pico-w)
+│   └── libraries.txt            # Arduino library dependencies
+├── media/
+│   ├── banner.png               # Professional engineering repository banner
+│   ├── 01_circuit.png           # Complete Wokwi circuit overview screenshot
+│   ├── 01_commands.png          # Interactive Serial Monitor command menu
+│   ├── 02_safe.png              # SAFE state operational evidence
+│   ├── 03_warning.png           # WARNING state operational evidence
+│   ├── 04_danger.png            # DANGER state operational evidence
+│   ├── 05_sensor_fault.png      # SENSOR_FAULT invalid-vector evidence
+│   ├── telemetry_plot.svg       # Telemetry vector visualization
+│   ├── actual_wokwi_telemetry.csv # Raw live Wokwi serial CSV stream
+│   └── README.md                # Media inventory and asset documentation
+├── evidence/
+│   ├── automated_test_log.txt   # Complete raw serial log of automated cycle ('a')
+│   ├── automated_test_log_plot.svg # Vector plot from actual test log
+│   └── README.md                # Test log transition breakdown
+├── tests/
+│   ├── test_stability_guard.cpp # Standalone native C++ test suite (20 scenarios)
+│   ├── test_runner.py           # Automated Python test runner
+│   └── test_report.json         # Structured machine-readable test results
+├── analysis/
+│   ├── telemetry_analysis.py    # Log parser, validator, and SVG plotter
+│   ├── sample_telemetry.csv     # Synthetic example dataset for script testing
+│   └── sample_telemetry_plot.svg# Vector visualization of synthetic test data
+├── docs/
+│   ├── architecture.md          # Comprehensive system architecture & I2C spec
+│   ├── testing.md               # Verification methodology & transition logs
+│   ├── troubleshooting.md       # Engineering post-mortem & root-cause deep dive
+│   └── hardware_phase2.md       # Physical breadboard bring-up guide
+├── backup/
+│   └── baseline_v2.0/           # Untouched baseline checkpoint
+├── .gitignore                   # Standard build and cache exclusions
+└── README.md                    # Primary repository documentation
+```
+
+---
+
+## 13. How to Reproduce in Wokwi
+
+1. Open the verified project in your browser:  
+   👉 **[https://wokwi.com/projects/478987065565532161](https://wokwi.com/projects/478987065565532161)**
+2. Click **Start Simulation**.
+3. Open the **Serial Monitor** tab in Wokwi (115,200 baud).
+4. Verify initial self-test output:
+   ```text
+   === StabilityGuard v2.1.1 Production Simulation ===
+   # [SELFTEST] Level (0,0,16384): PASS stage=OK magSq=268435456
+   # [MPU] WHO_AM_I verified: 0x68
+   # [MPU] Initialization OK, sensor ready.
+   ```
+5. Type `'a'` and press Enter to trigger the automated 20-second demonstration cycle.
+6. Click and hold the red **HOLD: SENSOR FAULT** button on the canvas to observe real-time fault injection and recovery.
+
+---
+
+## 14. License & Attribution
+
+Developed by the StabilityGuard Project Team as an embedded systems engineering portfolio project.  
+Licensed under the [MIT License](LICENSE) — free for educational and research use.

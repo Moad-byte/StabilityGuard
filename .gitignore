@@ -1,0 +1,28 @@
+# Build artifacts & binary executables
+build/
+*.bin
+*.elf
+*.hex
+*.uf2
+*.o
+*.obj
+*.exe
+
+# Arduino / IDE temp files
+.vscode/
+.idea/
+*.swp
+*~
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+Desktop.ini
