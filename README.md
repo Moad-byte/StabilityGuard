@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![StabilityGuard — Embedded Stability & Fault Detection System](media/banner.png)
+![StabilityGuard Animated Banner](media/banner.gif)
 
 [![Automated Tests](https://img.shields.io/badge/Automated_Tests-20%2F20_Passed-brightgreen.svg)](#9-automated-testing--verification-hierarchy)
 [![Target Controller](https://img.shields.io/badge/Target_Board-Raspberry_Pi_Pico_W-blue.svg)](#4-hardware-peripherals--pin-mapping)
