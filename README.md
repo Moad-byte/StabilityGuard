@@ -323,52 +323,7 @@ g++ -std=c++11 -Wall -Wextra -O2 tests/test_stability_guard.cpp -o test_stabilit
 
 ---
 
-## 12. Repository Structure
-
-```text
-StabilityGuard/
-├── src/
-│   ├── sketch.ino               # Raspberry Pi Pico W firmware (v2.1.1)
-│   ├── StabilityGuard.h         # Platform-independent core safety engine
-│   ├── diagram.json             # Wokwi circuit schematic (board-pi-pico-w)
-│   └── libraries.txt            # Arduino library dependencies
-├── media/
-│   ├── banner.png               # Professional engineering repository banner
-│   ├── 01_circuit.png           # Complete Wokwi circuit overview screenshot
-│   ├── 01_commands.png          # Interactive Serial Monitor command menu
-│   ├── 02_safe.png              # SAFE state operational evidence
-│   ├── 03_warning.png           # WARNING state operational evidence
-│   ├── 04_danger.png            # DANGER state operational evidence
-│   ├── 05_sensor_fault.png      # SENSOR_FAULT invalid-vector evidence
-│   ├── telemetry_plot.svg       # Telemetry vector visualization
-│   ├── actual_wokwi_telemetry.csv # Raw live Wokwi serial CSV stream
-│   └── README.md                # Media inventory and asset documentation
-├── evidence/
-│   ├── automated_test_log.txt   # Complete raw serial log of automated cycle ('a')
-│   ├── automated_test_log_plot.svg # Vector plot from actual test log
-│   └── README.md                # Test log transition breakdown
-├── tests/
-│   ├── test_stability_guard.cpp # Standalone native C++ test suite (20 scenarios)
-│   ├── test_runner.py           # Automated Python test runner
-│   └── test_report.json         # Structured machine-readable test results
-├── analysis/
-│   ├── telemetry_analysis.py    # Log parser, validator, and SVG plotter
-│   ├── sample_telemetry.csv     # Synthetic example dataset for script testing
-│   └── sample_telemetry_plot.svg# Vector visualization of synthetic test data
-├── docs/
-│   ├── architecture.md          # Comprehensive system architecture & I2C spec
-│   ├── testing.md               # Verification methodology & transition logs
-│   ├── troubleshooting.md       # Engineering post-mortem & root-cause deep dive
-│   └── hardware_phase2.md       # Physical breadboard bring-up guide
-├── backup/
-│   └── baseline_v2.0/           # Untouched baseline checkpoint
-├── .gitignore                   # Standard build and cache exclusions
-└── README.md                    # Primary repository documentation
-```
-
----
-
-## 13. How to Reproduce in Wokwi
+## 12. How to Reproduce in Wokwi
 
 1. Open the verified project in your browser:  
    👉 **[https://wokwi.com/projects/478987065565532161](https://wokwi.com/projects/478987065565532161)**
@@ -385,8 +340,3 @@ StabilityGuard/
 6. Click and hold the red **HOLD: SENSOR FAULT** button on the canvas to observe real-time fault injection and recovery.
 
 ---
-
-## 14. License & Attribution
-
-Developed by the StabilityGuard Project Team as an embedded systems engineering portfolio project.  
-Licensed under the [MIT License](LICENSE) — free for educational and research use.
