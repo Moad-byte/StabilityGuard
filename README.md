@@ -319,7 +319,6 @@ g++ -std=c++11 -Wall -Wextra -O2 tests/test_stability_guard.cpp -o test_stabilit
 1. **Verified Simulation Reference**: The provided runtime log and screenshots document core functionality in Wokwi targeting the **Raspberry Pi Pico W (`board-pi-pico-w`)**; see the evidence and test sections for precise coverage.
 2. **Pico 2 W simulation limitation**: In this project’s Wokwi trials, selecting `board-pi-pico-2w` produced `ANGLE_MATH_INVALID` on valid level readings. The exact board-specific cause has not been conclusively isolated. The reference simulation therefore uses `board-pi-pico-w`; this does not establish physical RP2350 hardware compatibility.
 3. **Sensor Scope**: Single 3-axis accelerometer vector analysis assumes steady-state dynamic conditions. Centrifugal or dynamic lateral acceleration from aggressive vehicle maneuvering can influence instantaneous gravity estimation; gyro sensor fusion is planned for Phase 2.
-4. **Non-Certified**: Educational engineering portfolio prototype. Not intended for commercial life-safety applications.
 
 ---
 
