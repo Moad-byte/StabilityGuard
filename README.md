@@ -352,9 +352,8 @@ g++ -std=c++11 -Wall -Wextra -O2 tests/test_stability_guard.cpp -o test_stabilit
 1. **Simulation reference**: The Wokwi logs and screenshots verify the **Pico W (`board-pi-pico-w`)** simulation, including automated state transitions.
 2. **Physical integration**: A separate **Pico 2 W** build was bench-tested with actual tilt sensing, OLED states, LEDs, buzzer, and button-triggered fault/recovery behavior. See [physical validation](docs/hardware_validation.md). Those are functional prototype tests, not formal certification or calibrated accuracy measurements.
 3. **Simulator compatibility**: Earlier Wokwi trials using `board-pi-pico-2w` produced `ANGLE_MATH_INVALID`; the simulator-specific cause was not isolated. Successful **physical Pico 2 W** testing does not establish that Wokwi's Pico 2 W simulator behaves identically.
-4. **Sensor identity**: The sensor module returned nonstandard `WHO_AM_I = 0x72` at I²C address `0x68`. Hardware-specific initialization handles the observed response, but the exact device identity remains unconfirmed.
-5. **Tilt estimation**: Accelerometer-only gravity estimation can be distorted by dynamic acceleration. Gyroscope fusion is not implemented in the verified version.
-
+4. **Sensor identity**: The sensor module returned nonstandard `WHO_AM_I = 0x72` at I²C address `0x68`. Hardware-specific initialization handles the observed response.
+5. **Tilt estimation**: Accelerometer-only gravity estimation can be distorted by dynamic acceleration.
 ---
 
 ## 13. How to Reproduce in Wokwi
