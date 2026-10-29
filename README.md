@@ -4,16 +4,16 @@
 
 ![StabilityGuard Animated Banner](media/banner.gif)
 
-[![Automated Tests](https://img.shields.io/badge/Automated_Tests-20%2F20_Passed-brightgreen.svg)](#9-automated-testing--verification-hierarchy)
-[![Target Controller](https://img.shields.io/badge/Target_Board-Raspberry_Pi_Pico_W-blue.svg)](#4-hardware-peripherals--pin-mapping)
+[![Automated Tests](https://img.shields.io/badge/Automated_Tests-20%2F20_Passed-brightgreen.svg)](#10-automated-testing--verification-hierarchy)
+[![Physical Hardware](https://img.shields.io/badge/Hardware-Pico_2_W-00a6c8.svg)](#6-physical-hardware-implementation--pico-2-w)
 [![Simulation Platform](https://img.shields.io/badge/Simulation-Wokwi_Verified-orange.svg)](#3-live-simulation--circuit-overview)
 [![Live Simulation](https://img.shields.io/badge/Live_Wokwi-Project_478987065565532161-green.svg)](https://wokwi.com/projects/478987065565532161)
 [![Architecture](https://img.shields.io/badge/Architecture-Portable_C%2B%2B11-purple.svg)](#2-system-architecture)
-[![Status](https://img.shields.io/badge/Phase_1-Verified_Release_v2.1.1-teal.svg)](#1-project-overview--engineering-motivation)
+[![Physical Testing](https://img.shields.io/badge/Physical_Build-Bench_Tested-21a179.svg)](#6-physical-hardware-implementation--pico-2-w)
 
-**An embedded stability monitoring, dynamic tilt classification, and sensor-fault isolation system engineered for autonomous mobile robots (AMRs), industrial transport utility vehicles, and agricultural rovers.**
+**An embedded stability-monitoring and fault-detection prototype for potential autonomous mobile robot (AMR) applications—verified in Wokwi on the Pico W and demonstrated on physical Pico 2 W hardware.**
 
-[Live Wokwi Simulation](https://wokwi.com/projects/478987065565532161) • [Automated Test Evidence](evidence/automated_test_log.txt) • [Architecture Guide](docs/architecture.md) • [Post-Mortem Report](docs/troubleshooting.md)
+[Explore Wokwi Simulation](#3-live-simulation--circuit-overview) • [Physical Hardware & Photos](#6-physical-hardware-implementation--pico-2-w) • [Watch Hardware Demo](media/hardware/StabilityGuard_Hardware_Demo.mp4) • [Pico 2 W Firmware](hardware/pico2w/StabilityGuard_Hardware_Pico2W/StabilityGuard_Hardware_Pico2W.ino) • [Live Wokwi Simulation](https://wokwi.com/projects/478987065565532161) • [Test Evidence](evidence/automated_test_log.txt) • [Architecture Guide](docs/architecture.md)
 
 </div>
 
@@ -30,14 +30,11 @@ In safety-critical embedded systems, relying on raw accelerometer measurements o
 
 **StabilityGuard** solves these challenges by combining integer-based acceleration vector validation, 64-bit integer square root math, tangent table interpolation, exponential moving average (EMA) jitter attenuation, asymmetric hysteresis state transitions, and real-time fault recovery.
 
-> [!NOTE]
-> **Scope & Educational Context**: StabilityGuard Phase 1 is a verified engineering prototype evaluated in the Wokwi embedded simulator on the Raspberry Pi Pico W. It demonstrates robust embedded software design, state machine verification, and bus arbitration. It is not certified for life-critical industrial safety deployment (ISO 13849 / IEC 61508).
-
 ---
 
 ## 2. System Architecture
 
-StabilityGuard strictly separates the platform-independent core safety logic from hardware-dependent peripheral drivers:
+StabilityGuard separates platform-independent core monitoring logic from hardware-dependent peripheral drivers. The following diagram describes the **Pico W simulation reference**; the physical Pico 2 W configuration is documented in [hardware validation](docs/hardware_validation.md):
 
 ```
 +-----------------------------------------------------------------------------------+
@@ -108,6 +105,8 @@ The full interactive circuit simulation runs in the browser on the **Wokwi Embed
 
 ## 4. Hardware Peripherals & Pin Mapping
 
+This table describes the original **Pico W simulation**. The physical Pico 2 W uses the same GPIO assignments, but its OLED is **128×32** rather than 128×64; see [the physical pinout and validation guide](docs/hardware_validation.md).
+
 | Component | Pin / Interface | Pico GPIO | Function & Electrical Parameters |
 |---|---|:---:|---|
 | **Raspberry Pi Pico W** | Core MCU | - | RP2040 Dual-Core ARM Cortex-M0+ @ 133 MHz, 264 KB SRAM |
@@ -122,6 +121,8 @@ The full interactive circuit simulation runs in the browser on the **Wokwi Embed
 ---
 
 ## 5. Operational States & Visual Simulation Evidence
+
+The detailed OLED descriptions below refer to the **128×64 Wokwi simulation**. The 128×32 physical screen uses a more compact layout.
 
 StabilityGuard classifies operating conditions into four mutually exclusive states, visually rendered on the hardware indicators and SSD1306 OLED display:
 
@@ -144,7 +145,37 @@ StabilityGuard classifies operating conditions into four mutually exclusive stat
 
 ---
 
-## 6. Algorithmic Principles & Implementation Details
+## 6. Physical Hardware Implementation — Pico 2 W
+
+StabilityGuard has been implemented and bench-tested on a **Raspberry Pi Pico 2 W**, building on the earlier Pico W simulation. The assembled prototype includes an MPU6050-labeled motion module, a **128×32 SSD1306 OLED**, three status LEDs, a piezo buzzer, and a fault-injection button.
+
+**Physical tests demonstrated live tilt monitoring, SAFE / WARNING / DANGER indication, audible alarms, SENSOR_FAULT injection, and recovery.** The following photographs document the actual physical build and each operating state.
+
+<div align="center">
+
+![Assembled StabilityGuard physical prototype](media/hardware/hardware_overview.jpg)
+
+*Physical Pico 2 W prototype, with all modules and indicators connected.*
+
+</div>
+
+| SAFE | WARNING |
+|:---:|:---:|
+| ![SAFE state with the green LED and physical OLED](media/hardware/safe_state.jpg) | ![WARNING state with the yellow LED and physical OLED](media/hardware/warning_state.jpg) |
+
+| DANGER | SENSOR_FAULT |
+|:---:|:---:|
+| ![DANGER state with the red LED](media/hardware/danger_state.jpg) | ![Physical fault indication](media/hardware/sensor_fault_state.jpg) |
+
+**[▶ Watch the real hardware demonstration (MP4)](media/hardware/StabilityGuard_Hardware_Demo.mp4)** · **[Physical firmware](hardware/pico2w/StabilityGuard_Hardware_Pico2W/StabilityGuard_Hardware_Pico2W.ino)** · **[Hardware validation and wiring](docs/hardware_validation.md)**
+
+**Simulation vs. physical hardware:** The Wokwi reference runs on a **Pico W with a 128×64 OLED**. The physical prototype uses a **Pico 2 W with a 128×32 OLED** and a separate hardware startup routine. The two firmware versions are preserved independently, sharing the core state-machine implementation.
+
+---
+
+---
+
+## 7. Algorithmic Principles & Implementation Details
 
 ### 1. Raw-Integer Acceleration Magnitude Validation
 Before computing angles, the engine validates that the measured static acceleration vector approximates the local gravitational field ($1.0g \pm 0.5g$):
@@ -187,7 +218,7 @@ The `'c'` serial command computes resting bias offsets:
 
 ---
 
-## 7. Interactive Serial Test Harness
+## 8. Interactive Serial Test Harness
 
 The firmware includes an interactive serial command interpreter operating at 115,200 baud:
 
@@ -210,7 +241,7 @@ The firmware includes an interactive serial command interpreter operating at 115
 
 ---
 
-## 8. Actual Automated Test Results & Telemetry Analysis
+## 9. Actual Automated Test Results & Telemetry Analysis
 
 During the final verification run in Wokwi, the automated demonstration sequence (`'a'`) was executed. The complete raw serial stream was captured and preserved in [`evidence/automated_test_log.txt`](evidence/automated_test_log.txt).
 
@@ -242,7 +273,7 @@ The actual recorded dataset was processed through [`analysis/telemetry_analysis.
 
 ---
 
-## 9. Automated Testing & Verification Hierarchy
+## 10. Automated Testing & Verification Hierarchy
 
 StabilityGuard uses a three-tiered testing hierarchy to validate the firmware:
 
@@ -263,6 +294,8 @@ StabilityGuard uses a three-tiered testing hierarchy to validate the firmware:
 |          PWM buzzer, discrete LEDs, SSD1306 OLED, and physical fault button.  |
 +-------------------------------------------------------------------------------+
 ```
+
+**Additional physical verification:** The Pico 2 W assembly was separately bench-tested with live MPU readings, OLED updates, all three LED states, buzzer behavior, and fault-button recovery. Details and photographs: [Physical Hardware Verification](docs/hardware_validation.md). This hands-on check is separate from the Python and native C++ tests listed below.
 
 ### Running the Test Suite
 ```bash
@@ -303,7 +336,7 @@ g++ -std=c++11 -Wall -Wextra -O2 tests/test_stability_guard.cpp -o test_stabilit
 
 ---
 
-## 10. Engineering Design Decisions & Trade-Offs
+## 11. Engineering Design Decisions & Trade-Offs
 
 | Engineering Challenge | Selected Solution | Evaluated Trade-Off / Rationale |
 |---|---|---|
@@ -314,15 +347,17 @@ g++ -std=c++11 -Wall -Wextra -O2 tests/test_stability_guard.cpp -o test_stabilit
 
 ---
 
-## 11. Verified Scope & Known Limitations
+## 12. Verified Scope & Known Limitations
 
-1. **Verified Simulation Reference**: The provided runtime log and screenshots document core functionality in Wokwi targeting the **Raspberry Pi Pico W (`board-pi-pico-w`)**; see the evidence and test sections for precise coverage.
-2. **Pico 2 W simulation limitation**: In this project’s Wokwi trials, selecting `board-pi-pico-2w` produced `ANGLE_MATH_INVALID` on valid level readings. The exact board-specific cause has not been conclusively isolated. The reference simulation therefore uses `board-pi-pico-w`; this does not establish physical RP2350 hardware compatibility.
-3. **Sensor Scope**: Single 3-axis accelerometer vector analysis assumes steady-state dynamic conditions. Centrifugal or dynamic lateral acceleration from aggressive vehicle maneuvering can influence instantaneous gravity estimation; gyro sensor fusion is planned for Phase 2.
+1. **Simulation reference**: The Wokwi logs and screenshots verify the **Pico W (`board-pi-pico-w`)** simulation, including automated state transitions.
+2. **Physical integration**: A separate **Pico 2 W** build was bench-tested with actual tilt sensing, OLED states, LEDs, buzzer, and button-triggered fault/recovery behavior. See [physical validation](docs/hardware_validation.md). Those are functional prototype tests, not formal certification or calibrated accuracy measurements.
+3. **Simulator compatibility**: Earlier Wokwi trials using `board-pi-pico-2w` produced `ANGLE_MATH_INVALID`; the simulator-specific cause was not isolated. Successful **physical Pico 2 W** testing does not establish that Wokwi's Pico 2 W simulator behaves identically.
+4. **Sensor identity**: The sensor module returned nonstandard `WHO_AM_I = 0x72` at I²C address `0x68`. Hardware-specific initialization handles the observed response, but the exact device identity remains unconfirmed.
+5. **Tilt estimation**: Accelerometer-only gravity estimation can be distorted by dynamic acceleration. Gyroscope fusion is not implemented in the verified version.
 
 ---
 
-## 12. How to Reproduce in Wokwi
+## 13. How to Reproduce in Wokwi
 
 1. Open the verified project in your browser:  
    👉 **[https://wokwi.com/projects/478987065565532161](https://wokwi.com/projects/478987065565532161)**
